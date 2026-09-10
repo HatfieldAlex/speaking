@@ -114,6 +114,10 @@
   .split.six { gap: 0.7em; }
   .split.six h3 { font-size: 0.58em; min-height: 2.5em; }
   .split.six ul { font-size: 0.41em; margin-left: 0; padding-left: 1.1em; }
+  .split.four { gap: 1.2em; }
+  .split.four h3 { font-size: 0.7em; }
+  .split.four ul { font-size: 0.5em; margin-left: 0; padding-left: 1.1em; }
+  .split.four .platforms h4 { font-size: 0.4em; }
   .split > div.platforms { flex: 1.25; }
   .platforms h3 { text-align: center; }
   .platforms .sub { display: flex; gap: 0.4em; }
@@ -133,7 +137,7 @@
   .reveal aside.notes { font-size: 0.7em; }
   .reveal .slides section { padding: 0.5em; }
 
-  /* ---- Pan/zoom image viewer (slide 4) ---- */
+  /* ---- Pan/zoom image viewer (slide 5) ---- */
   .viewer-heading { font-size: 0.95em; font-weight: 600; margin: 0 0 0.35em; color: var(--r-heading-color); }
 
   /* Explicit height: the surface inside is absolutely positioned, so it gives
@@ -311,12 +315,12 @@
   </aside>
 </section>
 
-<!-- ============ SLIDE 3: DJANGO AS OPEN SOURCE ============ -->
+<!-- ============ SLIDE 3: WHO RUNS DJANGO (people & rules) ============ -->
 <section>
   <h2 class="gradient-heading">So Who Actually Runs Django?</h2>
   <p class="tagline">The licence is the easy bit. The <em>governance</em> is the interesting bit.</p>
 
-  <div class="split six">
+  <div class="split">
     <div>
       <h3>Governance structure &amp; roles</h3>
       <ul>
@@ -337,6 +341,21 @@
         <li><strong>Security policy</strong> &mdash; private report, pre-notification, coordinated release</li>
       </ul>
     </div>
+  </div>
+
+  <aside class="notes">
+    The key point: "open source" here doesn't mean "anyone can push". It means the process is public.
+    Note the Fellows - Django solved the maintainer-burnout problem by paying people to do the
+    unglamorous work. Worth flagging that as a deliberate design decision, not an accident.
+  </aside>
+</section>
+
+<!-- ============ SLIDE 4: WHERE THE WORK HAPPENS (tools) ============ -->
+<section>
+  <h2 class="gradient-heading">Where the Work Happens</h2>
+  <p class="tagline">Some DSF-hosted, some rented &mdash; and all of it in the open, bar <em>one inbox</em>.</p>
+
+  <div class="split four">
     <div>
       <h3>Forums</h3>
       <ul>
@@ -386,18 +405,19 @@
   </div>
 
   <aside class="notes">
-    The key point: "open source" here doesn't mean "anyone can push". It means the process is public.
-    Note the Fellows - Django solved the maintainer-burnout problem by paying people to do the
-    unglamorous work. Worth flagging that as a deliberate design decision, not an accident.
+    These are just the tools - where people talk, where the code lives, what runs it. Don't get into
+    how work moves between them yet; that's the process, and it's the next slide.
     This slide sets up the flow diagram that follows: five or six distinct intake paths, each with
     different gates depending on whether it's a feature, a bug, an optimisation or a security concern.
   </aside>
 </section>
 
-<!-- ============ SLIDE 4: THE FLOW (pan/zoom) ============ -->
+<!-- ============ SLIDE 5: THE FLOW (pan/zoom) ============ -->
 <!--
-  The diagram is just an <img> pointing at flow.png sitting next to this file.
-  To update the diagram: re-export from flow.drawio over slide-deck/flow.png.
+  The diagram is just an <img> pointing at flow.svg sitting next to this file.
+  To update the diagram: re-export from flow.drawio over slide-deck/flow.svg.
+  (A PNG works here too - just change the src. SVG is used because it stays
+  sharp at any zoom, where a PNG blurs past its own pixel size.)
   No HTML changes needed - any size or aspect ratio is handled automatically.
 -->
 <section class="slide-viewer">
@@ -405,7 +425,7 @@
 
   <div class="panzoom" id="flow-viewer">
     <div class="panzoom-surface" id="flow-surface">
-      <img src="flow.png" alt="Django contribution intake flow diagram">
+      <img src="flow.svg" alt="Django contribution intake flow diagram">
     </div>
 
     <div class="panzoom-hint" id="flow-hint">Drag to pan &middot; scroll to zoom &middot; +/&minus;/0 keys &middot; double-click to reset</div>
@@ -447,12 +467,12 @@
 </script>
 <script>
 /* ---------------------------------------------------------------------------
-   Pan/zoom viewer for the flow diagram (slide 4).
+   Pan/zoom viewer for the flow diagram (slide 5).
 
    Self-contained vanilla JS - no libraries, no build step, no network calls,
    so it behaves identically from the filesystem and from GitHub Pages.
-   It reads the image's natural size on load, so swapping flow.png for a
-   different-sized export needs no changes here.
+   It reads the image's natural size on load, so swapping flow.svg for a
+   different-sized export (SVG or PNG) needs no changes here.
 --------------------------------------------------------------------------- */
 (function () {
   var viewport = document.getElementById('flow-viewer');
@@ -507,9 +527,27 @@
     idleTimer = setTimeout(function () { surface.style.willChange = 'auto'; }, 400);
   }
 
+  /* -- An SVG whose root element carries only a viewBox (no width/height) has
+        no intrinsic size, so naturalWidth reads 0 and nothing would ever be
+        laid out. Warn with the fix rather than failing silently. -- */
+  var warnedNoSize = false;
+  function naturalSize() {
+    var w = img.naturalWidth, h = img.naturalHeight;
+    if ((!w || !h) && img.complete) {
+      if (!warnedNoSize) {
+        warnedNoSize = true;
+        console.warn('[flow viewer] "' + img.getAttribute('src') + '" reports no intrinsic size. ' +
+          'If it is an SVG, give its root <svg> element width and height attributes, not just a viewBox.');
+      }
+      w = 1000; h = 1000;   // arbitrary, but keeps the viewer usable
+    }
+    return { w: w, h: h };
+  }
+
   function clampAt(s, x, y) {
     var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
-    var iw = img.naturalWidth * s, ih = img.naturalHeight * s;
+    var nat = naturalSize();
+    var iw = nat.w * s, ih = nat.h * s;
     var keepX = Math.min(EDGE_KEEP, iw), keepY = Math.min(EDGE_KEEP, ih);
     return {
       x: Math.min(Math.max(x, -(iw - keepX)), vw - keepX),
@@ -556,8 +594,9 @@
 
   function fit(animated) {
     var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
-    var iw = img.naturalWidth,     ih = img.naturalHeight;
-    if (!vw || !vh || !iw || !ih) return false;   // not laid out, or not loaded yet
+    if (!img.complete) return false;              // not loaded yet
+    var nat = naturalSize(), iw = nat.w, ih = nat.h;
+    if (!vw || !vh || !iw || !ih) return false;   // not laid out yet
 
     fitScale = Math.min((vw - PADDING * 2) / iw, (vh - PADDING * 2) / ih);
     // Zoom range: out to half the fitted view, in to 12x the image's own pixels
@@ -699,7 +738,7 @@
   function relayout() {
     measure();
     var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
-    var iw = img.naturalWidth,     ih = img.naturalHeight;
+    var nat = naturalSize(), iw = nat.w, ih = nat.h;
     if (!vw || !vh || !iw || !ih) return;
     if (!fitted) { fit(); return; }
 
