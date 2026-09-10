@@ -111,6 +111,15 @@
   .split > div { flex: 1; }
   .split h3 { margin-top: 0; }
   .split ul { font-size: 0.68em; margin-left: 0.8em; }
+  .split.six { gap: 0.7em; }
+  .split.six h3 { font-size: 0.58em; min-height: 2.5em; }
+  .split.six ul { font-size: 0.41em; margin-left: 0; padding-left: 1.1em; }
+  .split > div.platforms { flex: 1.25; }
+  .platforms h3 { text-align: center; }
+  .platforms .sub { display: flex; gap: 0.4em; }
+  .platforms .sub > div { flex: 1; }
+  .platforms h4 { font-size: 0.34em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin: 0 0 0.5em; white-space: nowrap; }
+  .platforms .sub ul { padding-left: 0.9em; }
 
   .prompt-list { text-align: left; max-width: 760px; margin: 0 auto; }
   .prompt-list li {
@@ -123,6 +132,91 @@
   .reveal .slide-number { font-family: 'JetBrains Mono', monospace; font-size: 0.5em; color: var(--dim); right: auto; left: 8px; }
   .reveal aside.notes { font-size: 0.7em; }
   .reveal .slides section { padding: 0.5em; }
+
+  /* ---- Pan/zoom image viewer (slide 4) ---- */
+  .viewer-heading { font-size: 0.95em; font-weight: 600; margin: 0 0 0.35em; color: var(--r-heading-color); }
+
+  /* Explicit height: the surface inside is absolutely positioned, so it gives
+     the box no content height to size from. Slide layout is 1280x720. */
+  .panzoom {
+    position: relative;
+    width: 100%;
+    height: 570px;
+    background: #0d1117;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;      /* we handle touch pan/pinch ourselves */
+    user-select: none;
+  }
+  .panzoom.is-grabbing { cursor: grabbing; }
+
+  /* will-change is set by script only while interacting - leaving it on makes
+     the browser hold a layer for the whole scaled image, which stutters at
+     high zoom on a diagram this large. */
+  .panzoom-surface {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+  }
+  .panzoom-surface img {
+    display: block;
+    max-width: none;          /* override reveal's img sizing */
+    background: #fff;         /* diagram exports assume a light ground */
+    border-radius: 4px;
+    -webkit-user-drag: none;  /* don't start a native image drag mid-pan */
+  }
+
+  /* Controls */
+  .panzoom-controls {
+    position: absolute;
+    right: 10px; bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(13,17,23,0.92);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 5px 7px;
+    z-index: 5;
+  }
+  .panzoom-controls button {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 6px 9px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .panzoom-controls button:hover { border-color: var(--accent); color: #fff; }
+  .panzoom-zoom-level {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    min-width: 46px;
+    text-align: center;
+  }
+
+  .panzoom-hint {
+    position: absolute;
+    left: 10px; bottom: 10px;
+    font-size: 11px;
+    color: var(--dim);
+    background: rgba(13,17,23,0.92);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 6px 9px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+  .panzoom-hint.faded { opacity: 0; }
 </style>
 </head>
 <body>
@@ -222,24 +316,72 @@
   <h2 class="gradient-heading">So Who Actually Runs Django?</h2>
   <p class="tagline">The licence is the easy bit. The <em>governance</em> is the interesting bit.</p>
 
-  <div class="split">
+  <div class="split six">
     <div>
-      <h3>Who decides</h3>
+      <h3>Governance structure &amp; roles</h3>
       <ul>
-        <li><strong>Django Software Foundation</strong> &mdash; the non-profit that holds the trademark and the money</li>
+        <li><strong>Django Software Foundation (DSF)</strong> &mdash; the non-profit that holds the trademark and the money</li>
         <li><strong>Steering Council</strong> &mdash; elected; rules on direction and significant changes</li>
+        <li><strong>Mergers</strong> &mdash; appointed by the Steering Council; the only ones who commit to <code>main</code></li>
         <li><strong>Fellows</strong> &mdash; <em>paid</em> contributors who triage, review and keep the lights on</li>
-        <li><strong>Mergers &amp; the wider community</strong> &mdash; everyone else who files, patches and reviews</li>
+        <li><strong>DSF members &amp; the wider community</strong> &mdash; vote, file, patch and review</li>
       </ul>
     </div>
     <div>
-      <h3>Where it happens</h3>
+      <h3>Protocols</h3>
       <ul>
-        <li><strong>Trac</strong> &mdash; the ticket tracker (<code>code.djangoproject.com</code>)</li>
-        <li><strong>GitHub</strong> &mdash; the code and the pull requests</li>
-        <li><strong>Forum &amp; Discord</strong> &mdash; discussion before decision</li>
         <li><strong>DEPs</strong> &mdash; Django Enhancement Proposals, for the big stuff</li>
+        <li><strong>Ticket spec</strong> &mdash; every Trac ticket carries a type, component and flags (<em>has patch</em>, <em>needs docs</em>, <em>needs tests</em>)</li>
+        <li><strong>Triage stages</strong> &mdash; Unreviewed &rarr; Accepted &rarr; Ready for checkin</li>
+        <li><strong>Deprecation policy</strong> &mdash; warn for two releases before removing</li>
+        <li><strong>Security policy</strong> &mdash; private report, pre-notification, coordinated release</li>
       </ul>
+    </div>
+    <div>
+      <h3>Forums</h3>
+      <ul>
+        <li><strong>Django Forum</strong> &mdash; <code>forum.djangoproject.com</code>; discussion before decision</li>
+        <li><strong>Discord</strong> &mdash; real-time chat and help for new contributors</li>
+        <li><strong>new-features repo</strong> &mdash; feature ideas triaged by the Steering Council</li>
+        <li><strong>Security email</strong> &mdash; the one <em>private</em> channel, for vulnerabilities</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Codebases</h3>
+      <ul>
+        <li><strong>Django</strong> &mdash; <code>django/django</code>, the framework itself</li>
+        <li><strong>djangoproject.com</strong> &mdash; the website, itself a Django app</li>      </ul>
+    </div>
+    <div>
+      <h3>Services</h3>
+      <ul>
+        <li><strong>GitHub</strong> &mdash; hosting, pull requests, Actions CI</li>
+        <li><strong>Trac</strong> &mdash; the bug tracker (<code>code.djangoproject.com</code>)</li>
+        <li><strong>Jenkins</strong> &mdash; the full test matrix (<code>djangoci.com</code>)</li>
+        <li><strong>Transifex</strong> &mdash; community translations</li>
+      </ul>
+    </div>
+    <div class="platforms">
+      <h3>Platforms</h3>
+      <div class="sub">
+        <div>
+          <h4>DSF-hosted</h4>
+          <ul>
+            <li><strong>djangoproject.com</strong></li>
+            <li><strong>Trac</strong></li>
+            <li><strong>Django Forum</strong></li>
+            <li><strong>Jenkins</strong></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Third-party</h4>
+          <ul>
+            <li><strong>GitHub</strong></li>
+            <li><strong>Discord</strong></li>
+            <li><strong>Transifex</strong></li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -249,6 +391,40 @@
     unglamorous work. Worth flagging that as a deliberate design decision, not an accident.
     This slide sets up the flow diagram that follows: five or six distinct intake paths, each with
     different gates depending on whether it's a feature, a bug, an optimisation or a security concern.
+  </aside>
+</section>
+
+<!-- ============ SLIDE 4: THE FLOW (pan/zoom) ============ -->
+<!--
+  The diagram is just an <img> pointing at flow.png sitting next to this file.
+  To update the diagram: re-export from flow.drawio over slide-deck/flow.png.
+  No HTML changes needed - any size or aspect ratio is handled automatically.
+-->
+<section class="slide-viewer">
+  <h2 class="viewer-heading gradient-heading">The Contribution Flow</h2>
+
+  <div class="panzoom" id="flow-viewer">
+    <div class="panzoom-surface" id="flow-surface">
+      <img src="flow.png" alt="Django contribution intake flow diagram">
+    </div>
+
+    <div class="panzoom-hint" id="flow-hint">Drag to pan &middot; scroll to zoom &middot; +/&minus;/0 keys &middot; double-click to reset</div>
+
+    <div class="panzoom-controls">
+      <button type="button" data-pz="out" title="Zoom out">&minus;</button>
+      <span class="panzoom-zoom-level" id="flow-zoom-level">100%</span>
+      <button type="button" data-pz="in" title="Zoom in">+</button>
+      <button type="button" data-pz="fit" title="Fit to screen">Fit</button>
+    </div>
+  </div>
+
+  <aside class="notes">
+    This is the centrepiece - don't narrate the whole diagram, drive it. Start fitted so they see the
+    shape: several distinct intake paths, not one queue. Then zoom into whichever lane the room asks
+    about. Feature ideas go to the GitHub ideas project and the Steering Council BEFORE any code -
+    that's the gate people find surprising. Bugs and security take completely different routes.
+    Keep pulling it back to the general question: which of these gates exist because it's open source,
+    and which would you want in your own repo?
   </aside>
 </section>
 
@@ -268,6 +444,295 @@
     transitionSpeed: 'fast',
     // Keyboard: 's' opens speaker notes view
   });
+</script>
+<script>
+/* ---------------------------------------------------------------------------
+   Pan/zoom viewer for the flow diagram (slide 4).
+
+   Self-contained vanilla JS - no libraries, no build step, no network calls,
+   so it behaves identically from the filesystem and from GitHub Pages.
+   It reads the image's natural size on load, so swapping flow.png for a
+   different-sized export needs no changes here.
+--------------------------------------------------------------------------- */
+(function () {
+  var viewport = document.getElementById('flow-viewer');
+  if (!viewport) return;
+
+  var surface = document.getElementById('flow-surface');
+  var img     = surface.querySelector('img');
+  var label   = document.getElementById('flow-zoom-level');
+  var hint    = document.getElementById('flow-hint');
+
+  var PADDING   = 16;   // breathing room around the fitted image
+  var EDGE_KEEP = 90;   // px of image always kept on screen, so it can't be lost
+
+  var scale = 1, tx = 0, ty = 0;
+  var fitScale = 1, minScale = 0.05, maxScale = 12;
+  var fitted = false;
+
+  /* -- Transform writes are batched into a single animation frame. A burst of
+        wheel events then produces one paint instead of one per event, which is
+        the main thing that made zooming feel stuttery. -- */
+  var frame = null;
+  function schedule() {
+    if (frame) return;
+    frame = requestAnimationFrame(function () {
+      frame = null;
+      surface.style.transform =
+        'translate3d(' + tx + 'px,' + ty + 'px,0) scale(' + scale + ')';
+      label.textContent = Math.round((scale / fitScale) * 100) + '%';
+    });
+  }
+
+  /* -- Reveal scales the whole slide with a CSS transform, so screen pixels and
+        layout pixels differ. The rect is measured once and cached: reading it
+        in the wheel handler forced a synchronous layout on every event. -- */
+  var rect = null, rectScale = 1;
+  function measure() {
+    rect = viewport.getBoundingClientRect();
+    rectScale = rect.width / viewport.offsetWidth || 1;
+  }
+  function toLocal(clientX, clientY) {
+    if (!rect) measure();
+    return { x: (clientX - rect.left) / rectScale, y: (clientY - rect.top) / rectScale };
+  }
+
+  /* -- Hint the compositor only while the user is actually interacting. Leaving
+        will-change on permanently makes the browser hold a layer for the whole
+        (very large) scaled image, which costs memory and stutters at high zoom. -- */
+  var idleTimer = null;
+  function interacting() {
+    surface.style.willChange = 'transform';
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { surface.style.willChange = 'auto'; }, 400);
+  }
+
+  function clampAt(s, x, y) {
+    var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+    var iw = img.naturalWidth * s, ih = img.naturalHeight * s;
+    var keepX = Math.min(EDGE_KEEP, iw), keepY = Math.min(EDGE_KEEP, ih);
+    return {
+      x: Math.min(Math.max(x, -(iw - keepX)), vw - keepX),
+      y: Math.min(Math.max(y, -(ih - keepY)), vh - keepY)
+    };
+  }
+
+  function setScaleAt(localX, localY, next) {
+    next = Math.max(minScale, Math.min(maxScale, next));
+    if (next === scale) return;
+    // Keep the image point under the cursor pinned in place.
+    var nx = localX - ((localX - tx) / scale) * next;
+    var ny = localY - ((localY - ty) / scale) * next;
+    var c = clampAt(next, nx, ny);
+    scale = next; tx = c.x; ty = c.y;
+    schedule();
+  }
+
+  /* ---- eased transitions, used by the buttons and Fit ---- */
+  var anim = null;
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+
+  function animateTo(ns, nx, ny, ms) {
+    stopAnim();
+    var s0 = scale, x0 = tx, y0 = ty, t0 = performance.now();
+    ms = ms || 240;
+    anim = requestAnimationFrame(function step(now) {
+      var p = Math.min(1, (now - t0) / ms);
+      var e = 1 - Math.pow(1 - p, 3);           // easeOutCubic
+      scale = s0 + (ns - s0) * e;
+      tx = x0 + (nx - x0) * e;
+      ty = y0 + (ny - y0) * e;
+      schedule();
+      anim = p < 1 ? requestAnimationFrame(step) : null;
+    });
+  }
+
+  function zoomCentre(factor) {
+    var cx = viewport.offsetWidth / 2, cy = viewport.offsetHeight / 2;
+    var next = Math.max(minScale, Math.min(maxScale, scale * factor));
+    var c = clampAt(next, cx - ((cx - tx) / scale) * next, cy - ((cy - ty) / scale) * next);
+    animateTo(next, c.x, c.y);
+  }
+
+  function fit(animated) {
+    var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+    var iw = img.naturalWidth,     ih = img.naturalHeight;
+    if (!vw || !vh || !iw || !ih) return false;   // not laid out, or not loaded yet
+
+    fitScale = Math.min((vw - PADDING * 2) / iw, (vh - PADDING * 2) / ih);
+    // Zoom range: out to half the fitted view, in to 12x the image's own pixels
+    // (or 40x the fitted view for small images) - far past the point of detail.
+    minScale = fitScale * 0.5;
+    maxScale = Math.max(12, fitScale * 40);
+
+    var s = fitScale;
+    var x = (vw - iw * s) / 2, y = (vh - ih * s) / 2;
+    if (animated && fitted) { animateTo(s, x, y); }
+    else { stopAnim(); scale = s; tx = x; ty = y; schedule(); }
+    fitted = true;
+    return true;
+  }
+
+  /* ---- wheel / trackpad zoom ---- */
+  viewport.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    stopAnim();
+    interacting();
+    measure();
+    var p = toLocal(e.clientX, e.clientY);
+    // Normalise across deltaMode (pixels / lines / pages).
+    var delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? viewport.offsetHeight : 1);
+    // Exponential response: equal wheel movement gives equal proportional zoom
+    // at every level, so it stays controllable when deep in. ctrl+wheel is a
+    // trackpad pinch, which sends much smaller deltas.
+    var k = e.ctrlKey ? 0.010 : 0.0022;
+    setScaleAt(p.x, p.y, scale * Math.exp(-delta * k));
+    fadeHint();
+  }, { passive: false });
+
+  /* ---- pointer drag to pan, two-pointer pinch to zoom ---- */
+  var pointers = new Map();
+  var lastPan = null, pinchStart = null;
+
+  viewport.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    e.stopPropagation();                       // don't let reveal read it as a swipe
+    stopAnim();
+    measure();
+    viewport.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      lastPan = toLocal(e.clientX, e.clientY);
+      viewport.classList.add('is-grabbing');
+    } else if (pointers.size === 2) {
+      pinchStart = pinchState();
+    }
+    interacting();
+    fadeHint();
+  });
+
+  viewport.addEventListener('pointermove', function (e) {
+    if (!pointers.has(e.pointerId)) return;
+    e.stopPropagation();
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    interacting();
+
+    if (pointers.size === 1 && lastPan) {
+      var p = toLocal(e.clientX, e.clientY);
+      var c = clampAt(scale, tx + (p.x - lastPan.x), ty + (p.y - lastPan.y));
+      tx = c.x; ty = c.y;
+      lastPan = p;
+      schedule();
+    } else if (pointers.size === 2 && pinchStart && pinchStart.dist > 0) {
+      var now = pinchState();
+      setScaleAt(now.mid.x, now.mid.y, pinchStart.scale * (now.dist / pinchStart.dist));
+    }
+  });
+
+  function pinchState() {
+    var pts = Array.from(pointers.values());
+    var dx = pts[0].x - pts[1].x, dy = pts[0].y - pts[1].y;
+    return {
+      dist: Math.hypot(dx, dy),
+      mid: toLocal((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2),
+      scale: scale
+    };
+  }
+
+  /* Note: no pointerleave handler. The pointer is captured, so a drag that
+     wanders outside the box should keep going rather than being cut off. */
+  function endPointer(e) {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    if (pointers.size === 1) lastPan = null;   // re-anchor after lifting one finger
+    if (pointers.size === 0) {
+      lastPan = null;
+      viewport.classList.remove('is-grabbing');
+    }
+  }
+  viewport.addEventListener('pointerup', endPointer);
+  viewport.addEventListener('pointercancel', endPointer);
+
+  /* ---- double-click resets; plain clicks never reach reveal ---- */
+  viewport.addEventListener('dblclick', function (e) {
+    e.preventDefault(); e.stopPropagation(); fit(true);
+  });
+  viewport.addEventListener('click', function (e) { e.stopPropagation(); });
+
+  /* ---- control buttons ---- */
+  viewport.querySelectorAll('[data-pz]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      measure();
+      var action = btn.getAttribute('data-pz');
+      if (action === 'in')  zoomCentre(1.6);
+      if (action === 'out') zoomCentre(1 / 1.6);
+      if (action === 'fit') fit(true);
+      fadeHint();
+    });
+    // A drag starting on a button shouldn't pan the image.
+    btn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  });
+
+  /* ---- keyboard, only while this slide is showing ---- */
+  document.addEventListener('keydown', function (e) {
+    if (!window.Reveal || !Reveal.getCurrentSlide) return;
+    var slide = Reveal.getCurrentSlide();
+    if (!slide || !slide.contains(viewport)) return;
+    if (e.key === '+' || e.key === '=') { e.stopPropagation(); measure(); zoomCentre(1.6); }
+    else if (e.key === '-' || e.key === '_') { e.stopPropagation(); measure(); zoomCentre(1 / 1.6); }
+    else if (e.key === '0') { e.stopPropagation(); fit(true); }
+  });
+
+  var hintFaded = false;
+  function fadeHint() {
+    if (hintFaded || !hint) return;
+    hintFaded = true;
+    hint.classList.add('faded');
+  }
+
+  /* -- On resize (including entering fullscreen, which reveal reports as one)
+        keep whatever the user was looking at instead of snapping back to fit.
+        Re-fitting here meant a stray resize threw away their zoom. -- */
+  function relayout() {
+    measure();
+    var vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+    var iw = img.naturalWidth,     ih = img.naturalHeight;
+    if (!vw || !vh || !iw || !ih) return;
+    if (!fitted) { fit(); return; }
+
+    var ratio = scale / fitScale;                    // zoom relative to fit
+    var ix = (vw / 2 - tx) / scale;                  // image point at view centre
+    var iy = (vh / 2 - ty) / scale;
+
+    fitScale = Math.min((vw - PADDING * 2) / iw, (vh - PADDING * 2) / ih);
+    minScale = fitScale * 0.5;
+    maxScale = Math.max(12, fitScale * 40);
+
+    var ns = Math.max(minScale, Math.min(maxScale, fitScale * ratio));
+    var c = clampAt(ns, vw / 2 - ix * ns, vh / 2 - iy * ns);
+    scale = ns; tx = c.x; ty = c.y;
+    schedule();
+  }
+
+  /* ---- fitting: the slide has no size until reveal shows it ---- */
+  function tryFit() { measure(); if (!fitted) fit(); }
+
+  if (img.complete) tryFit();
+  img.addEventListener('load', function () { fitted = false; measure(); fit(); });
+
+  if (window.Reveal) {
+    Reveal.on('ready', tryFit);
+    Reveal.on('slidechanged', function (e) {
+      if (e.currentSlide && e.currentSlide.contains(viewport)) tryFit();
+    });
+    Reveal.on('resize', relayout);
+  }
+  window.addEventListener('resize', relayout);
+})();
+</script>
 </script>
 
 </body>
