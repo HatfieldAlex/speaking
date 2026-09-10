@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Work Gets Into Django</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --r-background-color: #0a0a0f;
+    --r-main-font: 'Inter', sans-serif;
+    --r-main-font-size: 32px;
+    --r-heading-font: 'Inter', sans-serif;
+    --r-heading-color: #f0f0f0;
+    --r-main-color: #d0d0d8;
+    --r-link-color: #4fc3f7;
+    --r-link-color-hover: #81d4fa;
+    --r-selection-background-color: #4fc3f7;
+    --r-heading-text-transform: none;
+    --accent: #4fc3f7;
+    --accent2: #ffb74d;
+    --accent3: #81c784;
+    --accent4: #e57373;
+    --dim: #6a6a7a;
+  }
+
+  .reveal { font-weight: 300; }
+  .reveal h1 { font-size: 2.2em; font-weight: 700; line-height: 1.15; }
+  .reveal h2 { font-size: 1.5em; font-weight: 600; margin-bottom: 0.6em; }
+  .reveal h3 { font-size: 1.1em; font-weight: 600; color: var(--accent); }
+  .reveal p { line-height: 1.6; }
+  .reveal ul, .reveal ol { margin-left: 0.5em; }
+  .reveal li { margin-bottom: 0.45em; line-height: 1.5; }
+  .reveal li li { font-size: 0.88em; color: var(--dim); margin-bottom: 0.2em; }
+  .reveal strong { color: #fff; font-weight: 600; }
+  .reveal em { color: var(--accent2); font-style: italic; }
+  .reveal code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(255,255,255,0.07);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: var(--accent3);
+  }
+
+  .reveal .subtitle { color: var(--accent); font-size: 0.55em; font-weight: 300; letter-spacing: 0.02em; }
+  .reveal .meta { color: var(--dim); font-size: 0.45em; margin-top: 1.2em; font-weight: 300; }
+  .reveal .tagline { color: var(--accent2); font-size: 0.6em; font-style: italic; margin-bottom: 1em; font-weight: 300; }
+
+  .gradient-heading {
+    font-size: 1.5em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.3em;
+  }
+
+  /* Card grid */
+  .card-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1em;
+    margin: 0.6em 0;
+    flex-wrap: wrap;
+  }
+  .card {
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 0.9em 1.1em;
+    text-align: left;
+    flex: 1 1 220px;
+    max-width: 300px;
+  }
+  .card .card-icon { font-size: 1.5em; margin-bottom: 0.15em; }
+  .card h3 { margin: 0 0 0.25em 0; font-size: 0.72em; }
+  .card p { color: #7a8ba8; font-size: 0.44em; margin: 0; line-height: 1.5; }
+
+  /* Two stacked card rows on one slide - tighter, so it still fits 720px */
+  .dual-row h2 { font-size: 1.15em; margin-bottom: 0.15em; }
+  .dual-row .tagline { font-size: 0.5em; margin-bottom: 0.5em; }
+  .dual-row .card-row { gap: 0.7em; margin: 0.3em 0 0.7em; }
+  .dual-row .card { padding: 0.6em 0.8em; border-radius: 10px; }
+  .dual-row .card .card-icon { font-size: 1.1em; margin-bottom: 0.05em; }
+  .dual-row .card h3 { font-size: 0.6em; margin-bottom: 0.15em; }
+  .dual-row .card p { font-size: 0.38em; line-height: 1.45; }
+  .dual-row .row-label {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.4em;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 0.1em 0;
+  }
+  .dual-row .row-divider {
+    max-width: 90%;
+    height: 1px;
+    margin: 0 auto 0.4em;
+    background: linear-gradient(90deg, transparent, #334155, transparent);
+  }
+  .dual-row .row-label.oss { color: var(--accent3); }
+
+  /* Two-column split */
+  .split { display: flex; gap: 2em; align-items: flex-start; text-align: left; }
+  .split > div { flex: 1; }
+  .split h3 { margin-top: 0; }
+  .split ul { font-size: 0.68em; margin-left: 0.8em; }
+
+  .prompt-list { text-align: left; max-width: 760px; margin: 0 auto; }
+  .prompt-list li {
+    color: var(--accent2);
+    margin-bottom: 0.5em;
+    font-size: 0.72em;
+    line-height: 1.5;
+  }
+
+  .reveal .slide-number { font-family: 'JetBrains Mono', monospace; font-size: 0.5em; color: var(--dim); right: auto; left: 8px; }
+  .reveal aside.notes { font-size: 0.7em; }
+  .reveal .slides section { padding: 0.5em; }
+</style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ============ SLIDE 1: TITLE ============ -->
+<section>
+  <h1>How Work Gets<br>Into Django</h1>
+  <p class="subtitle">A starting point, not the destination &mdash; Django&rsquo;s contribution process as a way into the wider question of how <em>any</em> codebase should take in change</p>
+  <p class="tagline" style="margin-top: 0.9em;">Django&rsquo;s process &nbsp;&rarr;&nbsp; contributing to open source &nbsp;&rarr;&nbsp; contributing to anything</p>
+  <p class="meta">11 September 2026<br>Python Leadership Roundtable<br>Alex Hatfield</p>
+  <aside class="notes">
+    Set expectations before anything else: this is a roundtable, not a lecture. I'll walk the Django
+    process because it's concrete, public and stress-tested - but Django is the worked example, not
+    the subject. Say explicitly that the interesting conversation is the one it opens onto: what does
+    good open source contribution look like, and what do any of us actually owe a contributor showing
+    up at our own repos? Invite people to interrupt with parallels from their own projects and teams -
+    that tangent IS the session, not a derailment of it.
+  </aside>
+</section>
+
+<!-- ============ SLIDE 2: WHAT IS DJANGO ============ -->
+<section class="dual-row">
+  <h2 class="gradient-heading">Two Things, Briefly</h2>
+  <p class="tagline">The general case first &mdash; then the example we&rsquo;ll spend the session on.</p>
+
+  <p class="row-label oss">What is open source?</p>
+  <div class="row-divider"></div>
+
+  <div class="card-row">
+    <div class="card">
+      <div class="card-icon">📜</div>
+      <h3>A licence</h3>
+      <p>Anyone may use, read, modify and redistribute the code. The legal floor &mdash; and the least interesting part.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">👁️</div>
+      <h3>A process in public</h3>
+      <p>Not just the source. The bug reports, the review comments, the arguments and the rejections are all visible too.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤝</div>
+      <h3>A community, not a vendor</h3>
+      <p>Contributors arrive unbidden and unmanaged. Nobody can be assigned work &mdash; only persuaded to do it.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🚪</div>
+      <h3>A way in</h3>
+      <p>Which is the bit we&rsquo;re here for: how does a stranger&rsquo;s idea become code you ship?</p>
+    </div>
+  </div>
+
+  <p class="row-label">And what is Django?</p>
+  <div class="row-divider"></div>
+
+  <div class="card-row">
+    <div class="card">
+      <div class="card-icon">🐍</div>
+      <h3>A Python web framework</h3>
+      <p>Batteries included: ORM, migrations, admin, auth, templating, forms, i18n, security defaults &mdash; in the box, not bolted on.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📅</div>
+      <h3>Public since 2005</h3>
+      <p>Born at a newspaper &mdash; the Lawrence Journal-World in Kansas &mdash; and BSD licensed from the start.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🎸</div>
+      <h3>Named after Django Reinhardt</h3>
+      <p>The Belgian-Romani jazz guitarist (1910&ndash;1953), pioneer of gypsy jazz &mdash; who played his best-known work with two fretting fingers after a fire injury.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧭</div>
+      <h3>An opinionated philosophy</h3>
+      <p>DRY, loose coupling, explicit over implicit, and <em>less code</em> &mdash; pragmatism over purity, written down publicly so decisions can be argued against.</p>
+    </div>
+  </div>
+
+  <aside class="notes">
+    Both rows are definitions the room mostly already has - go fast, don't teach.
+    Top row: the move to make is that open source is not mainly a licensing fact. The licence is
+    the floor. What actually distinguishes it is that the process is public and the labour is
+    unassignable - you can persuade contributors, never task them. That constraint shapes every gate
+    in the flow we're about to walk, and it's also the thing that DOESN'T hold inside our own
+    companies. Worth planting that now; the room will pick at it later.
+    Bottom row: now narrow to the example. The point is age and philosophy. Django is old enough that
+    its process has been stress-tested, and opinionated enough that it has to decide what does and
+    doesn't belong in core. The published design philosophy means "does this fit Django?" is a
+    question the intake process can answer rather than a matter of taste.
+  </aside>
+</section>
+
+<!-- ============ SLIDE 3: DJANGO AS OPEN SOURCE ============ -->
+<section>
+  <h2 class="gradient-heading">So Who Actually Runs Django?</h2>
+  <p class="tagline">The licence is the easy bit. The <em>governance</em> is the interesting bit.</p>
+
+  <div class="split">
+    <div>
+      <h3>Who decides</h3>
+      <ul>
+        <li><strong>Django Software Foundation</strong> &mdash; the non-profit that holds the trademark and the money</li>
+        <li><strong>Steering Council</strong> &mdash; elected; rules on direction and significant changes</li>
+        <li><strong>Fellows</strong> &mdash; <em>paid</em> contributors who triage, review and keep the lights on</li>
+        <li><strong>Mergers &amp; the wider community</strong> &mdash; everyone else who files, patches and reviews</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Where it happens</h3>
+      <ul>
+        <li><strong>Trac</strong> &mdash; the ticket tracker (<code>code.djangoproject.com</code>)</li>
+        <li><strong>GitHub</strong> &mdash; the code and the pull requests</li>
+        <li><strong>Forum &amp; Discord</strong> &mdash; discussion before decision</li>
+        <li><strong>DEPs</strong> &mdash; Django Enhancement Proposals, for the big stuff</li>
+      </ul>
+    </div>
+  </div>
+
+  <aside class="notes">
+    The key point: "open source" here doesn't mean "anyone can push". It means the process is public.
+    Note the Fellows - Django solved the maintainer-burnout problem by paying people to do the
+    unglamorous work. Worth flagging that as a deliberate design decision, not an accident.
+    This slide sets up the flow diagram that follows: five or six distinct intake paths, each with
+    different gates depending on whether it's a feature, a bug, an optimisation or a security concern.
+  </aside>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    showNotes: false,
+    width: 1280,
+    height: 720,
+    margin: 0.08,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    // Keyboard: 's' opens speaker notes view
+  });
+</script>
+
+</body>
+</html>
