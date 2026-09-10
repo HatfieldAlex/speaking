@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>How Work Gets Into Django</title>
+<title>OSS: How is Django Maintained?</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
 <style>
@@ -83,7 +83,7 @@
   .card p { color: #7a8ba8; font-size: 0.44em; margin: 0; line-height: 1.5; }
 
   /* Two stacked card rows on one slide - tighter, so it still fits 720px */
-  .dual-row h2 { font-size: 1.15em; margin-bottom: 0.15em; }
+  .dual-row h2 { font-size: 1.15em; margin-bottom: 0.5em; }
   .dual-row .tagline { font-size: 0.5em; margin-bottom: 0.5em; }
   .dual-row .card-row { gap: 0.7em; margin: 0.3em 0 0.7em; }
   .dual-row .card { padding: 0.6em 0.8em; border-radius: 10px; }
@@ -111,19 +111,20 @@
   .split > div { flex: 1; }
   .split h3 { margin-top: 0; }
   .split ul { font-size: 0.68em; margin-left: 0.8em; }
-  .split.six { gap: 0.7em; }
-  .split.six h3 { font-size: 0.58em; min-height: 2.5em; }
-  .split.six ul { font-size: 0.41em; margin-left: 0; padding-left: 1.1em; }
-  .split.four { gap: 1.2em; }
-  .split.four h3 { font-size: 0.7em; }
-  .split.four ul { font-size: 0.5em; margin-left: 0; padding-left: 1.1em; }
-  .split.four .platforms h4 { font-size: 0.4em; }
-  .split > div.platforms { flex: 1.25; }
-  .platforms h3 { text-align: center; }
-  .platforms .sub { display: flex; gap: 0.4em; }
-  .platforms .sub > div { flex: 1; }
-  .platforms h4 { font-size: 0.34em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin: 0 0 0.5em; white-space: nowrap; }
-  .platforms .sub ul { padding-left: 0.9em; }
+
+  /* Tools table */
+  .reveal table.tool-table { width: 100%; max-width: 1040px; margin: 0.3em auto 0; border-collapse: collapse; font-size: 0.55em; }
+  .reveal table.tool-table th {
+    text-align: left;
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    padding: 0.4em 0.9em;
+    border-bottom: 1px solid #334155;
+  }
+  .reveal table.tool-table td { padding: 0.4em 0.9em; border-bottom: 1px solid #1e293b; line-height: 1.4; }
 
   .prompt-list { text-align: left; max-width: 760px; margin: 0 auto; }
   .prompt-list li {
@@ -133,11 +134,32 @@
     line-height: 1.5;
   }
 
+  /* Closing slide: discussion prompts */
+  .discussion .prompt-list { max-width: 1000px; margin: 0 auto; }
+  .discussion .prompt-list li { font-size: 0.66em; margin-bottom: 0.6em; }
+
+  /* Title slide fills the whole 1280x720 frame so the disclaimer can sit in its corner.
+     reveal centres a slide by its scrollHeight, so a full-height slide gets top:0 and
+     the content is centred here instead. */
+  .reveal .slides section.title-slide { height: 720px; box-sizing: border-box; }
+  .title-slide .title-inner { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .title-slide .disclaimer {
+    position: absolute;
+    right: 0.6em; bottom: 0.5em;
+    max-width: 560px;
+    margin: 0;
+    text-align: right;
+    font-size: 0.4em;
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--dim);
+  }
+
   .reveal .slide-number { font-family: 'JetBrains Mono', monospace; font-size: 0.5em; color: var(--dim); right: auto; left: 8px; }
   .reveal aside.notes { font-size: 0.7em; }
   .reveal .slides section { padding: 0.5em; }
 
-  /* ---- Pan/zoom image viewer (slide 5) ---- */
+  /* ---- Pan/zoom image viewer (slide 6) ---- */
   .viewer-heading { font-size: 0.95em; font-weight: 600; margin: 0 0 0.35em; color: var(--r-heading-color); }
 
   /* Explicit height: the surface inside is absolutely positioned, so it gives
@@ -229,11 +251,12 @@
 <div class="slides">
 
 <!-- ============ SLIDE 1: TITLE ============ -->
-<section>
-  <h1>How Work Gets<br>Into Django</h1>
-  <p class="subtitle">A starting point, not the destination &mdash; Django&rsquo;s contribution process as a way into the wider question of how <em>any</em> codebase should take in change</p>
-  <p class="tagline" style="margin-top: 0.9em;">Django&rsquo;s process &nbsp;&rarr;&nbsp; contributing to open source &nbsp;&rarr;&nbsp; contributing to anything</p>
-  <p class="meta">11 September 2026<br>Python Leadership Roundtable<br>Alex Hatfield</p>
+<section class="title-slide">
+  <div class="title-inner">
+    <h1>OSS: How is Django<br>Maintained*?</h1>
+    <p class="meta">11 September 2026<br>Python Leadership Roundtable<br>Alex Hatfield</p>
+  </div>
+  <p class="disclaimer">* Not exhaustive &mdash; but pretty solid, and certainly the main bits.</p>
   <aside class="notes">
     Set expectations before anything else: this is a roundtable, not a lecture. I'll walk the Django
     process because it's concrete, public and stress-tested - but Django is the worked example, not
@@ -245,70 +268,20 @@
 </section>
 
 <!-- ============ SLIDE 2: WHAT IS DJANGO ============ -->
-<section class="dual-row">
-  <h2 class="gradient-heading">Two Things, Briefly</h2>
-  <p class="tagline">The general case first &mdash; then the example we&rsquo;ll spend the session on.</p>
-
-  <p class="row-label oss">What is open source?</p>
-  <div class="row-divider"></div>
-
-  <div class="card-row">
-    <div class="card">
-      <div class="card-icon">📜</div>
-      <h3>A licence</h3>
-      <p>Anyone may use, read, modify and redistribute the code. The legal floor &mdash; and the least interesting part.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">👁️</div>
-      <h3>A process in public</h3>
-      <p>Not just the source. The bug reports, the review comments, the arguments and the rejections are all visible too.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🤝</div>
-      <h3>A community, not a vendor</h3>
-      <p>Contributors arrive unbidden and unmanaged. Nobody can be assigned work &mdash; only persuaded to do it.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🚪</div>
-      <h3>A way in</h3>
-      <p>Which is the bit we&rsquo;re here for: how does a stranger&rsquo;s idea become code you ship?</p>
-    </div>
-  </div>
-
-  <p class="row-label">And what is Django?</p>
-  <div class="row-divider"></div>
-
-  <div class="card-row">
-    <div class="card">
-      <div class="card-icon">🐍</div>
-      <h3>A Python web framework</h3>
-      <p>Batteries included: ORM, migrations, admin, auth, templating, forms, i18n, security defaults &mdash; in the box, not bolted on.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">📅</div>
-      <h3>Public since 2005</h3>
-      <p>Born at a newspaper &mdash; the Lawrence Journal-World in Kansas &mdash; and BSD licensed from the start.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🎸</div>
-      <h3>Named after Django Reinhardt</h3>
-      <p>The Belgian-Romani jazz guitarist (1910&ndash;1953), pioneer of gypsy jazz &mdash; who played his best-known work with two fretting fingers after a fire injury.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🧭</div>
-      <h3>An opinionated philosophy</h3>
-      <p>DRY, loose coupling, explicit over implicit, and <em>less code</em> &mdash; pragmatism over purity, written down publicly so decisions can be argued against.</p>
-    </div>
-  </div>
+<section>
+  <ul>
+    <li><strong>Open source</strong> &mdash; code anyone can use and change</li>
+    <li><strong>Django</strong> &mdash; a batteries-included Python web framework</li>
+  </ul>
 
   <aside class="notes">
-    Both rows are definitions the room mostly already has - go fast, don't teach.
-    Top row: the move to make is that open source is not mainly a licensing fact. The licence is
+    Both are definitions the room mostly already has - go fast, don't teach.
+    Open source: the move to make is that open source is not mainly a licensing fact. The licence is
     the floor. What actually distinguishes it is that the process is public and the labour is
     unassignable - you can persuade contributors, never task them. That constraint shapes every gate
     in the flow we're about to walk, and it's also the thing that DOESN'T hold inside our own
     companies. Worth planting that now; the room will pick at it later.
-    Bottom row: now narrow to the example. The point is age and philosophy. Django is old enough that
+    Django: now narrow to the example. The point is age and philosophy. Django is old enough that
     its process has been stress-tested, and opinionated enough that it has to decide what does and
     doesn't belong in core. The published design philosophy means "does this fit Django?" is a
     question the intake process can answer rather than a matter of taste.
@@ -317,28 +290,16 @@
 
 <!-- ============ SLIDE 3: WHO RUNS DJANGO (people & rules) ============ -->
 <section>
-  <h2 class="gradient-heading">So Who Actually Runs Django?</h2>
-  <p class="tagline">The licence is the easy bit. The <em>governance</em> is the interesting bit.</p>
+  <h2 class="gradient-heading"><em>Who</em> maintains Django</h2>
 
   <div class="split">
     <div>
       <h3>Governance structure &amp; roles</h3>
       <ul>
-        <li><strong>Django Software Foundation (DSF)</strong> &mdash; the non-profit that holds the trademark and the money</li>
         <li><strong>Steering Council</strong> &mdash; elected; rules on direction and significant changes</li>
         <li><strong>Mergers</strong> &mdash; appointed by the Steering Council; the only ones who commit to <code>main</code></li>
         <li><strong>Fellows</strong> &mdash; <em>paid</em> contributors who triage, review and keep the lights on</li>
-        <li><strong>DSF members &amp; the wider community</strong> &mdash; vote, file, patch and review</li>
-      </ul>
-    </div>
-    <div>
-      <h3>Protocols</h3>
-      <ul>
-        <li><strong>DEPs</strong> &mdash; Django Enhancement Proposals, for the big stuff</li>
-        <li><strong>Ticket spec</strong> &mdash; every Trac ticket carries a type, component and flags (<em>has patch</em>, <em>needs docs</em>, <em>needs tests</em>)</li>
-        <li><strong>Triage stages</strong> &mdash; Unreviewed &rarr; Accepted &rarr; Ready for checkin</li>
-        <li><strong>Deprecation policy</strong> &mdash; warn for two releases before removing</li>
-        <li><strong>Security policy</strong> &mdash; private report, pre-notification, coordinated release</li>
+        <li><strong>Wider community</strong></li>
       </ul>
     </div>
   </div>
@@ -350,65 +311,28 @@
   </aside>
 </section>
 
-<!-- ============ SLIDE 4: WHERE THE WORK HAPPENS (tools) ============ -->
+<!-- ============ SLIDE 4: WHAT IT'S MAINTAINED WITH (tools) ============ -->
 <section>
-  <h2 class="gradient-heading">Where the Work Happens</h2>
-  <p class="tagline">Some DSF-hosted, some rented &mdash; and all of it in the open, bar <em>one inbox</em>.</p>
+  <h2 class="gradient-heading"><em>What</em> maintains Django</h2>
 
-  <div class="split four">
-    <div>
-      <h3>Forums</h3>
-      <ul>
-        <li><strong>Django Forum</strong> &mdash; <code>forum.djangoproject.com</code>; discussion before decision</li>
-        <li><strong>Discord</strong> &mdash; real-time chat and help for new contributors</li>
-        <li><strong>new-features repo</strong> &mdash; feature ideas triaged by the Steering Council</li>
-        <li><strong>Security email</strong> &mdash; the one <em>private</em> channel, for vulnerabilities</li>
-      </ul>
-    </div>
-    <div>
-      <h3>Codebases</h3>
-      <ul>
-        <li><strong>Django</strong> &mdash; <code>django/django</code>, the framework itself</li>
-        <li><strong>djangoproject.com</strong> &mdash; the website, itself a Django app</li>      </ul>
-    </div>
-    <div>
-      <h3>Services</h3>
-      <ul>
-        <li><strong>GitHub</strong> &mdash; hosting, pull requests, Actions CI</li>
-        <li><strong>Trac</strong> &mdash; the bug tracker (<code>code.djangoproject.com</code>)</li>
-        <li><strong>Jenkins</strong> &mdash; the full test matrix (<code>djangoci.com</code>)</li>
-        <li><strong>Transifex</strong> &mdash; community translations</li>
-      </ul>
-    </div>
-    <div class="platforms">
-      <h3>Platforms</h3>
-      <div class="sub">
-        <div>
-          <h4>DSF-hosted</h4>
-          <ul>
-            <li><strong>djangoproject.com</strong></li>
-            <li><strong>Trac</strong></li>
-            <li><strong>Django Forum</strong></li>
-            <li><strong>Jenkins</strong></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Third-party</h4>
-          <ul>
-            <li><strong>GitHub</strong></li>
-            <li><strong>Discord</strong></li>
-            <li><strong>Transifex</strong></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
+  <table class="tool-table">
+    <thead>
+      <tr><th>Tool</th><th>What it&rsquo;s used for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Django website</strong></td><td>Docs, downloads, news and release notes (<code>djangoproject.com</code>)</td></tr>
+      <tr><td><strong>Django Forum (Discourse)</strong></td><td>Discussion before decision (<code>forum.djangoproject.com</code>)</td></tr>
+      <tr><td><strong>Discord</strong></td><td>Real-time chat and help for new contributors</td></tr>
+      <tr><td><strong>Security email</strong></td><td>The one <em>private</em> channel, for vulnerabilities</td></tr>
+      <tr><td><strong>Trac</strong></td><td>Tickets and triage (<code>code.djangoproject.com</code>)</td></tr>
+      <tr><td><strong>GitHub</strong></td><td>Repos, pull requests, code review, CI checks and feature ideas</td></tr>
+      <tr><td><strong>Transifex</strong></td><td>Where the community writes translations</td></tr>
+    </tbody>
+  </table>
 
   <aside class="notes">
-    These are just the tools - where people talk, where the code lives, what runs it. Don't get into
-    how work moves between them yet; that's the process, and it's the next slide.
-    This slide sets up the flow diagram that follows: five or six distinct intake paths, each with
-    different gates depending on whether it's a feature, a bug, an optimisation or a security concern.
+    Just the tools - where people talk, where work is tracked, what builds and tests it. Don't get into
+    how work moves between them; that's the process, next slide.
   </aside>
 </section>
 
@@ -419,13 +343,17 @@
   (A PNG works here too - just change the src. SVG is used because it stays
   sharp at any zoom, where a PNG blurs past its own pixel size.)
   No HTML changes needed - any size or aspect ratio is handled automatically.
+  The path lives in data-flow-src; the viewer script sets src with a ?v=<timestamp>
+  suffix so every page load fetches a fresh copy instead of a cached one.
+  (Not data-src: reveal.js treats that as its own lazy-load attribute and would
+  overwrite src with the un-busted path.)
 -->
 <section class="slide-viewer">
-  <h2 class="viewer-heading gradient-heading">The Contribution Flow</h2>
+  <h2 class="viewer-heading gradient-heading"><em>How</em> is Django maintained</h2>
 
   <div class="panzoom" id="flow-viewer">
     <div class="panzoom-surface" id="flow-surface">
-      <img src="flow.svg" alt="Django contribution intake flow diagram">
+      <img data-flow-src="flow.svg" alt="Django contribution intake flow diagram">
     </div>
 
     <div class="panzoom-hint" id="flow-hint">Drag to pan &middot; scroll to zoom &middot; +/&minus;/0 keys &middot; double-click to reset</div>
@@ -448,6 +376,26 @@
   </aside>
 </section>
 
+<!-- ============ SLIDE 6: DISCUSSION ============ -->
+<section class="discussion">
+  <h2 class="gradient-heading">Over to the Room</h2>
+
+  <ul class="prompt-list">
+    <li>Are there aspects of Django&rsquo;s process worth borrowing for our own work &mdash; and anything from how we work that could improve Django&rsquo;s contribution process?</li>
+    <li>Has anyone got experience contributing to other open source projects? How does it compare?</li>
+    <li>What is AI doing to open source?</li>
+  </ul>
+
+  <aside class="notes">
+    This is the slide the whole walkthrough was setting up - leave most of the session for it.
+    Start with the first question while the flow is fresh, then widen out to other projects, and finish on AI.
+    Useful contrasts if the room needs a nudge: CPython's PEPs and Steering Council (Django borrowed
+    the model), FastAPI's single-maintainer model, projects that live or die on one volunteer.
+    On AI: floods of low-effort generated PRs and security reports vs. AI helping newcomers get over the first-contribution hump.
+    The goal isn't to resolve anything, it's to surface how differently people in the room handle it.
+  </aside>
+</section>
+
 </div><!-- .slides -->
 </div><!-- .reveal -->
 
@@ -467,7 +415,7 @@
 </script>
 <script>
 /* ---------------------------------------------------------------------------
-   Pan/zoom viewer for the flow diagram (slide 5).
+   Pan/zoom viewer for the flow diagram (slide 6).
 
    Self-contained vanilla JS - no libraries, no build step, no network calls,
    so it behaves identically from the filesystem and from GitHub Pages.
@@ -758,6 +706,10 @@
 
   /* ---- fitting: the slide has no size until reveal shows it ---- */
   function tryFit() { measure(); if (!fitted) fit(); }
+
+  // Cache-bust: a unique query string per page load forces a fresh fetch.
+  // Set before the img.complete check, since an img with no src counts as complete.
+  img.src = img.dataset.flowSrc + '?v=' + Date.now();
 
   if (img.complete) tryFit();
   img.addEventListener('load', function () { fitted = false; measure(); fit(); });
